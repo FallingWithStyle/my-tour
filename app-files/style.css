@@ -56,6 +56,15 @@ a, a:hover, a:active, a:visited {
   right: 50px;
 }
 
+/* If there is a VR button the title bar must make space for it */
+body.vr-enabled #titleBar {
+  right: 80px;
+}
+
+body.vr-enabled.mobile #titleBar {
+  right: 100px;
+}
+
 /* If there is a fullscreen button the title bar must make space for it */
 body.fullscreen-enabled #titleBar {
   right: 80px;
@@ -63,6 +72,15 @@ body.fullscreen-enabled #titleBar {
 
 body.fullscreen-enabled.mobile #titleBar {
   right: 100px;
+}
+
+/* If there are both VR and fullscreen buttons */
+body.vr-enabled.fullscreen-enabled #titleBar {
+  right: 120px;
+}
+
+body.vr-enabled.fullscreen-enabled.mobile #titleBar {
+  right: 150px;
 }
 
 /* If there are multiple scenes the title bar must make space for the scene list toggle */
@@ -93,6 +111,45 @@ body.multiple-scenes.mobile #titleBar {
 
 .mobile #titleBar .sceneName {
   line-height: 40px;
+}
+
+#vrToggle {
+  display: none;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  padding: 5px;
+  background-color: rgb(103,115,131);
+  background-color: rgba(103,115,131,0.8);
+  text-align: center;
+  line-height: 30px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.mobile #vrToggle {
+  width: 50px;
+  height: 50px;
+  line-height: 40px;
+}
+
+body.vr-enabled #vrToggle {
+  display: block;
+}
+
+body.vr-enabled #vrToggle.active {
+  background-color: rgb(46,204,113);
+  background-color: rgba(46,204,113,0.8);
+}
+
+#vrToggle .icon-text {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: #fff;
 }
 
 #fullscreenToggle {
@@ -162,6 +219,15 @@ body.fullscreen-enabled #fullscreenToggle {
   height: 50px;
 }
 
+/* If there is a VR button, autorotate must be placed a bit to the left */
+body.vr-enabled #autorotateToggle {
+  right: 40px;
+}
+
+body.vr-enabled.mobile #autorotateToggle {
+  right: 50px;
+}
+
 /* If there is a fullscreen button, autorotate must placed a bit to the left */
 body.fullscreen-enabled #autorotateToggle {
   right: 40px;
@@ -169,6 +235,15 @@ body.fullscreen-enabled #autorotateToggle {
 
 body.fullscreen-enabled.mobile #autorotateToggle {
   right: 50px;
+}
+
+/* If there are both VR and fullscreen buttons */
+body.vr-enabled.fullscreen-enabled #autorotateToggle {
+  right: 80px;
+}
+
+body.vr-enabled.fullscreen-enabled.mobile #autorotateToggle {
+  right: 100px;
 }
 
 #autorotateToggle .icon {

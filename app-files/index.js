@@ -29,6 +29,7 @@
   var sceneListToggleElement = document.querySelector('#sceneListToggle');
   var autorotateToggleElement = document.querySelector('#autorotateToggle');
   var fullscreenToggleElement = document.querySelector('#fullscreenToggle');
+  var vrToggleElement = document.querySelector('#vrToggle');
 
   // Detect desktop or mobile mode.
   if (window.matchMedia) {
@@ -120,6 +121,128 @@
   // Set handler for autorotate toggle.
   autorotateToggleElement.addEventListener('click', toggleAutorotate);
 
+  // Set up WebXR VR mode, if supported.
+  var xrSession = null;
+  var xrCurrentScene = null;
+  var xrFrameRequestId = null;
+
+  function checkWebXRSupport() {
+    if (navigator.xr) {
+      return navigator.xr.isSessionSupported('immersive-vr');
+    }
+    return Promise.resolve(false);
+  }
+
+  function onXRFrame(time, frame) {
+    if (!xrSession || !xrCurrentScene) return;
+
+    var pose = frame.getViewerPose(xrSession.requestReferenceSpace('viewer'));
+    if (pose) {
+      // Get head orientation from the pose
+      var orientation = pose.transform.orientation;
+      
+      // Convert quaternion to yaw/pitch
+      // WebXR uses right-handed coordinate system, Marzipano uses left-handed
+      // Extract yaw and pitch from quaternion
+      var qx = orientation.x;
+      var qy = orientation.y;
+      var qz = orientation.z;
+      var qw = orientation.w;
+      
+      // Convert to Euler angles (yaw, pitch)
+      var yaw = Math.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz));
+      var pitch = Math.asin(2 * (qw * qy - qx * qz));
+      
+      // Update the view with head tracking
+      var viewParams = xrCurrentScene.view.parameters();
+      xrCurrentScene.view.setParameters({
+        yaw: yaw,
+        pitch: pitch,
+        fov: viewParams.fov
+      });
+    }
+
+    xrFrameRequestId = xrSession.requestAnimationFrame(onXRFrame);
+  }
+
+  function startXRSession() {
+    if (!navigator.xr) {
+      console.warn('WebXR not supported');
+      return;
+    }
+
+    navigator.xr.requestSession('immersive-vr', {
+      requiredFeatures: ['local-floor'],
+      optionalFeatures: ['bounded-floor', 'hand-tracking']
+    }).then(function(session) {
+      xrSession = session;
+      vrToggleElement.classList.add('active');
+      stopAutorotate();
+
+      // Get the current scene
+      xrCurrentScene = scenes.find(function(s) {
+        return s.scene === viewer.scene();
+      });
+
+      // Get the WebGL context from Marzipano's stage
+      var stage = viewer.stage();
+      var gl = stage.webGlContext();
+      
+      if (!gl) {
+        console.error('Could not get WebGL context from Marzipano stage');
+        session.end();
+        return;
+      }
+      
+      // Make the WebGL context compatible with WebXR
+      gl.makeXRCompatible().then(function() {
+        // Set up the base layer
+        var baseLayer = new XRWebGLLayer(session, gl);
+        session.updateRenderState({ baseLayer: baseLayer });
+
+        // Start the render loop
+        xrFrameRequestId = session.requestAnimationFrame(onXRFrame);
+
+        // Handle session end
+        session.addEventListener('end', function() {
+          xrSession = null;
+          xrCurrentScene = null;
+          xrFrameRequestId = null;
+          vrToggleElement.classList.remove('active');
+          startAutorotate();
+        });
+      }).catch(function(err) {
+        console.error('Failed to make WebGL context XR compatible:', err);
+        session.end();
+      });
+    }).catch(function(err) {
+      console.error('Failed to start XR session:', err);
+      alert('Failed to enter VR mode. Make sure your headset is connected and WebXR is enabled.');
+    });
+  }
+
+  function endXRSession() {
+    if (xrSession) {
+      xrSession.end();
+    }
+  }
+
+  // Check for WebXR support and enable VR button
+  checkWebXRSupport().then(function(supported) {
+    if (supported) {
+      document.body.classList.add('vr-enabled');
+      vrToggleElement.addEventListener('click', function() {
+        if (xrSession) {
+          endXRSession();
+        } else {
+          startXRSession();
+        }
+      });
+    }
+  }).catch(function(err) {
+    console.warn('WebXR support check failed:', err);
+  });
+
   // Set up fullscreen mode, if supported.
   if (screenfull.enabled && data.settings.fullscreenButton) {
     document.body.classList.add('fullscreen-enabled');
@@ -186,6 +309,7 @@
     stopAutorotate();
     scene.view.setParameters(scene.data.initialViewParameters);
     scene.scene.switchTo();
+    xrCurrentScene = scene;
     startAutorotate();
     updateSceneName(scene);
     updateSceneList(scene);
